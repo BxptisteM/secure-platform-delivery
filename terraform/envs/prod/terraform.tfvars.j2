@@ -1,0 +1,35 @@
+aws_region   = "{{ shared.aws_region }}"
+project_name = "{{ shared.project_name }}"
+environment  = "{{ environments.prod.environment }}"
+
+availability_zones = [
+{% for az in shared.availability_zones %}
+  "{{ az }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+vpc_cidr = "{{ environments.prod.vpc_cidr }}"
+
+public_subnet_cidrs = [
+{% for cidr in environments.prod.public_subnet_cidrs %}
+  "{{ cidr }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+private_app_subnet_cidrs = [
+{% for cidr in environments.prod.private_app_subnet_cidrs %}
+  "{{ cidr }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+private_db_subnet_cidrs = [
+{% for cidr in environments.prod.private_db_subnet_cidrs %}
+  "{{ cidr }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+allowed_ingress_cidr_blocks = [
+{% for cidr in shared.allowed_ingress_cidr_blocks %}
+  "{{ cidr }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
