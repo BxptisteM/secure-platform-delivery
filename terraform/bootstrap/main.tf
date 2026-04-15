@@ -61,6 +61,8 @@ resource "aws_dynamodb_table" "tfstate_lock" {
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
 
+  # checkov:skip=CKV_AWS_119: DynamoDB default encryption is sufficient for tfstate lock
+
   server_side_encryption {
     enabled = true
   }
