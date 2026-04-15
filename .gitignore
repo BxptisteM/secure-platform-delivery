@@ -33,3 +33,5 @@ override.tf.json
 .jinja4config-output/
 
 *.lock.hcl
+
+errors_checkov.txt

@@ -17,6 +17,11 @@ resource "aws_s3_bucket" "tfstate" {
   bucket        = "secure-platform-tfstate"
   force_destroy = false
 
+  # checkov:skip=CKV2_AWS_61: Lifecycle policy not desired for tfstate
+  # checkov:skip=CKV2_AWS_62: Event notifications not needed
+  # checkov:skip=CKV_AWS_144: Cross region replication not needed
+  # checkov:skip=CKV_AWS_18: Access logging not needed
+
   tags = {
     Project   = "secure-platform"
     ManagedBy = "Terraform"
@@ -36,7 +41,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      kms_master_key_id = "alias/aws/s3"
+      sse_algorithm     = "aws:kms"
     }
   }
 }
@@ -54,6 +60,14 @@ resource "aws_dynamodb_table" "tfstate_lock" {
   name         = "secure-platform-tfstate-lock"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
+
+  server_side_encryption {
+    enabled = true
+  }
+
+  point_in_time_recovery {
+    enabled = true
+  }
 
   attribute {
     name = "LockID"
