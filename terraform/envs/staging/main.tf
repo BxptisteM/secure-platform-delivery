@@ -22,6 +22,9 @@ module "environment" {
   enable_waf                     = var.enable_waf
   waf_default_action             = var.waf_default_action
   waf_managed_rule_groups        = var.waf_managed_rule_groups
+  kms_key_arn                    = module.kms.kms_key_arn
+  db_username                    = var.db_username
+  db_password                    = var.db_password
 }
 
 output "kms_key_id" {
@@ -96,15 +99,30 @@ output "alb_zone_id" {
 
 output "waf_id" {
   value       = module.environment.waf_id
-  description = "WAF ID for dev environment"
+  description = "WAF ID for staging environment"
 }
 
 output "waf_arn" {
   value       = module.environment.waf_arn
-  description = "WAF ARN for dev environment"
+  description = "WAF ARN for staging environment"
 }
 
 output "waf_name" {
   value       = module.environment.waf_name
-  description = "WAF name for dev environment"
+  description = "WAF name for staging environment"
+}
+
+output "db_instance_id" {
+  value       = module.environment.db_instance_id
+  description = "RDS instance ID for dev environment"
+}
+
+output "db_instance_endpoint" {
+  value       = module.environment.db_instance_endpoint
+  description = "RDS endpoint for dev environment"
+}
+
+output "secure_bucket_name" {
+  value       = module.environment.secure_bucket_name
+  description = "Encrypted S3 bucket name for dev environment"
 }

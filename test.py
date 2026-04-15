@@ -26,6 +26,7 @@ def run(cmd, capture=False):
 def ok(msg): print(f"{GREEN}✔ {msg}{RESET}")
 def fail(msg): print(f"{RED}✘ {msg}{RESET}")
 def info(msg): print(f"{BLUE}➜ {msg}{RESET}")
+def warn(msg): print(f"{YELLOW}⚠ {msg}{RESET}")
 
 
 if len(sys.argv) != 2:
@@ -41,6 +42,9 @@ alb_dns, _ = run(f"cd {path} && terraform output -raw alb_dns_name", True)
 alb_arn, _ = run(f"cd {path} && terraform output -raw alb_arn", True)
 waf_arn, _ = run(f"cd {path} && terraform output -raw waf_arn", True)
 sg, _ = run(f"cd {path} && terraform output -raw alb_security_group_id", True)
+
+bucket_name, bucket_rc = run(f"cd {path} && terraform output -raw secure_bucket_name", True)
+db_instance_id, db_rc = run(f"cd {path} && terraform output -raw db_instance_id", True)
 
 info("DNS resolution")
 _, code = run(f"nslookup {alb_dns}", True)
@@ -89,25 +93,93 @@ for _ in range(20):
 time.sleep(60)
 
 info("CloudWatch metrics")
+alb_dim = alb_arn.split(":loadbalancer/")[1]
 
-found = False
-for _ in range(6):
-    out, _ = run(f"""aws cloudwatch list-metrics \
+out, _ = run(
+    f"""aws cloudwatch get-metric-statistics \
 --namespace AWS/ApplicationELB \
---region {REGION}""", True)
+--metric-name RequestCount \
+--dimensions Name=LoadBalancer,Value="{alb_dim}" \
+--statistics Sum \
+--period 60 \
+--start-time "$(date -u -d '15 minutes ago' +%Y-%m-%dT%H:%M:%SZ)" \
+--end-time "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+--region {REGION}""",
+    True,
+)
 
-    if "RequestCount" in out:
-        ok("Metrics OK")
-        found = True
-        break
-
-    time.sleep(10)
-
-if not found:
+if '"Sum"' in out and '"Datapoints": []' not in out:
+    ok("Metrics OK")
+else:
     fail("Metrics missing")
 
 info("WAF logs")
 out, _ = run(f"""aws logs describe-log-groups --region {REGION}""", True)
 ok("Logs OK (or not enabled)")
+
+info("S3 bucket")
+if bucket_rc != 0 or not bucket_name:
+    warn("S3 output missing")
+else:
+    out, rc = run(
+        f"""aws s3api get-bucket-encryption \
+--bucket "{bucket_name}" \
+--region {REGION}""",
+        True,
+    )
+    if rc == 0 and "aws:kms" in out:
+        ok("S3 encryption OK")
+    else:
+        fail("S3 encryption missing")
+
+    out, rc = run(
+        f"""aws s3api get-public-access-block \
+--bucket "{bucket_name}" \
+--region {REGION}""",
+        True,
+    )
+    if rc == 0 and "BlockPublicAcls" in out and "true" in out.lower():
+        ok("S3 public access block OK")
+    else:
+        fail("S3 public access block missing")
+
+    out, rc = run(
+        f"""aws s3api get-bucket-versioning \
+--bucket "{bucket_name}" \
+--region {REGION}""",
+        True,
+    )
+    if rc == 0 and '"Status": "Enabled"' in out:
+        ok("S3 versioning OK")
+    else:
+        fail("S3 versioning missing")
+
+info("RDS instance")
+if db_rc != 0 or not db_instance_id:
+    warn("RDS output missing")
+else:
+    out, rc = run(
+        f"""aws rds describe-db-instances \
+--db-instance-identifier "{db_instance_id}" \
+--region {REGION}""",
+        True,
+    )
+    if rc != 0:
+        fail("RDS instance not found")
+    else:
+        if '"StorageEncrypted": true' in out:
+            ok("RDS encryption OK")
+        else:
+            fail("RDS encryption missing")
+
+        if '"PubliclyAccessible": false' in out:
+            ok("RDS private access OK")
+        else:
+            fail("RDS is public")
+
+        if '"DBInstanceStatus": "available"' in out:
+            ok("RDS available")
+        else:
+            warn("RDS not available yet")
 
 print(f"\n{GREEN}--- FULL TEST COMPLETE ---{RESET}\n")

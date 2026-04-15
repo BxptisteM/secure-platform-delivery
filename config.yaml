@@ -16,6 +16,8 @@ shared:
   enable_waf: true
   waf_default_action: "allow"
 
+  db_username: "postgres"
+
 environments:
   dev:
     environment: "dev"

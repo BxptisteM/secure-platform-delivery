@@ -146,6 +146,68 @@ resource "aws_db_subnet_group" "this" {
   subnet_ids = aws_subnet.private_db[*].id
 }
 
+resource "aws_db_instance" "this" {
+  identifier              = "${var.project_name}-${var.environment}-db"
+  engine                  = "postgres"
+  engine_version          = "16"
+  instance_class          = "db.t3.micro"
+  allocated_storage       = 20
+  storage_type            = "gp3"
+
+  username = var.db_username
+  password = var.db_password
+
+  db_subnet_group_name    = aws_db_subnet_group.this.name
+  vpc_security_group_ids  = [aws_security_group.db.id]
+
+  storage_encrypted       = true
+  kms_key_id              = var.kms_key_arn
+
+  skip_final_snapshot     = true
+  publicly_accessible     = false
+  deletion_protection     = false
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-db"
+  })
+}
+
+resource "aws_s3_bucket" "secure" {
+  bucket = "${var.project_name}-${var.environment}-secure-bucket"
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-secure-bucket"
+  })
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "secure" {
+  bucket = aws_s3_bucket.secure.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = var.kms_key_arn
+      sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "secure" {
+  bucket = aws_s3_bucket.secure.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "secure" {
+  bucket = aws_s3_bucket.secure.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_instance" "test" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "t2.micro"

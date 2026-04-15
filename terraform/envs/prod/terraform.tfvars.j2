@@ -51,3 +51,6 @@ waf_managed_rule_groups = [
   }{% if not loop.last %},{% endif %}
 {% endfor %}
 ]
+
+db_username = "{{ shared.db_username }}"
+db_password = "{{ 'PROD_DB_PASSWORD' | env }}"
