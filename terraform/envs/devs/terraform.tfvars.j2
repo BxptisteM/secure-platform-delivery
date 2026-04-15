@@ -33,3 +33,21 @@ allowed_ingress_cidr_blocks = [
   "{{ cidr }}"{% if not loop.last %},{% endif %}
 {% endfor %}
 ]
+
+alb_internal                   = {{ shared.alb_internal | lower }}
+alb_enable_deletion_protection = {{ environments.dev.alb_enable_deletion_protection | lower }}
+alb_idle_timeout               = {{ shared.alb_idle_timeout }}
+
+enable_waf         = {{ shared.enable_waf | lower }}
+waf_default_action = "{{ shared.waf_default_action }}"
+
+waf_managed_rule_groups = [
+{% for rule in shared.waf_managed_rule_groups %}
+  {
+    name            = "{{ rule.name }}"
+    priority        = {{ rule.priority }}
+    vendor_name     = "{{ rule.vendor_name }}"
+    override_action = "{{ rule.override_action }}"
+  }{% if not loop.last %},{% endif %}
+{% endfor %}
+]
