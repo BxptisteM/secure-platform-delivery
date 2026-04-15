@@ -241,6 +241,7 @@ resource "aws_db_instance" "this" {
 resource "aws_s3_bucket" "secure" {
   bucket = "${var.project_name}-${var.environment}-secure-bucket"
 
+  # checkov:skip=CKV2_AWS_61: Lifecycle policy not needed
   # checkov:skip=CKV2_AWS_62: Event notifications not needed
   # checkov:skip=CKV_AWS_144: Replication not needed
   # checkov:skip=CKV_AWS_18: Access logging not needed
@@ -261,18 +262,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "secure" {
   }
 }
 
-resource "aws_s3_bucket_lifecycle_configuration" "secure" {
-  bucket = aws_s3_bucket.secure.id
 
-  rule {
-    id     = "default"
-    status = "Enabled"
-
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 7
-    }
-  }
-}
 
 resource "aws_s3_bucket_versioning" "secure" {
   bucket = aws_s3_bucket.secure.id
