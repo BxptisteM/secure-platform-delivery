@@ -66,26 +66,26 @@ jobs:
           name: trivy-report
           path: trivy-results.json
 
-  # 4. Terraform Deployment
-  terraform:
-    name: 🚀 Terraform Apply/Plan
-    needs: trivy # Arrow from Trivy to Terraform
+  # 4. Terraform Deployments
+  deploy_dev:
+    name: 🚀 Deploy Dev
+    needs: trivy
     runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.message, '[ALL]') ||
+      contains(github.event.head_commit.message, '[DEV]') ||
+      github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
-
-      - name: Execute via launch.py
+      - name: Execute Dev
         env:
           ENV_FILE_CONTENT: ${{ secrets.ENV_FILE }}
-          # AWS Credential for the CLI.
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           TF_IN_AUTOMATION: true
@@ -96,3 +96,53 @@ jobs:
           else
             python launch.py dev
           fi
+
+  deploy_staging:
+    name: 🚀 Deploy Staging
+    needs: trivy
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.message, '[ALL]') ||
+      contains(github.event.head_commit.message, '[STAGING]')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Execute Staging
+        env:
+          ENV_FILE_CONTENT: ${{ secrets.ENV_FILE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_IN_AUTOMATION: true
+        run: |
+          echo "$ENV_FILE_CONTENT" > .env
+          python launch.py staging
+
+  deploy_prod:
+    name: 🚀 Deploy Prod
+    needs: trivy
+    runs-on: ubuntu-latest
+    if: >
+      contains(github.event.head_commit.message, '[ALL]') ||
+      contains(github.event.head_commit.message, '[PROD]')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Execute Prod
+        env:
+          ENV_FILE_CONTENT: ${{ secrets.ENV_FILE }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_IN_AUTOMATION: true
+        run: |
+          echo "$ENV_FILE_CONTENT" > .env
+          python launch.py prod

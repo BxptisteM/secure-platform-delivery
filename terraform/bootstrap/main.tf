@@ -17,7 +17,6 @@ resource "aws_s3_bucket" "tfstate" {
   bucket        = "secure-platform-tfstate"
   force_destroy = false
 
-  # checkov:skip=CKV2_AWS_61: Lifecycle policy not desired for tfstate
   # checkov:skip=CKV2_AWS_62: Event notifications not needed
   # checkov:skip=CKV_AWS_144: Cross region replication not needed
   # checkov:skip=CKV_AWS_18: Access logging not needed
@@ -33,6 +32,19 @@ resource "aws_s3_bucket_versioning" "tfstate" {
 
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "tfstate" {
+  bucket = aws_s3_bucket.tfstate.id
+
+  rule {
+    id     = "default"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 

@@ -221,15 +221,15 @@ resource "aws_db_instance" "this" {
   publicly_accessible     = false
 
   # checkov:skip=CKV_AWS_118: Enhanced monitoring requires IAM role
-  # checkov:skip=CKV_AWS_353: Performance insights not needed
   # checkov:skip=CKV_AWS_157: Multi-AZ expensive
   # checkov:skip=CKV_AWS_293: Disabled for easy destroy
-  # checkov:skip=CKV_AWS_129: RDS logging disabled
-  # checkov:skip=CKV2_AWS_30: Query Logging disabled
-  # checkov:skip=CKV2_AWS_60: Copy tags not needed
   deletion_protection                 = false
   auto_minor_version_upgrade          = true
   iam_database_authentication_enabled = true
+
+  performance_insights_enabled    = true
+  copy_tags_to_snapshot           = true
+  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-${var.environment}-db"
@@ -239,7 +239,6 @@ resource "aws_db_instance" "this" {
 resource "aws_s3_bucket" "secure" {
   bucket = "${var.project_name}-${var.environment}-secure-bucket"
 
-  # checkov:skip=CKV2_AWS_61: Lifecycle policy not needed
   # checkov:skip=CKV2_AWS_62: Event notifications not needed
   # checkov:skip=CKV_AWS_144: Replication not needed
   # checkov:skip=CKV_AWS_18: Access logging not needed
@@ -256,6 +255,19 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "secure" {
     apply_server_side_encryption_by_default {
       kms_master_key_id = var.kms_key_arn
       sse_algorithm     = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "secure" {
+  bucket = aws_s3_bucket.secure.id
+
+  rule {
+    id     = "default"
+    status = "Enabled"
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }
