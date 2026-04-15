@@ -31,3 +31,5 @@ override.tf.json
 !.terraform.lock.hcl
 
 .jinja4config-output/
+
+*.lock.hcl

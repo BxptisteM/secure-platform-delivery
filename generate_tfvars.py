@@ -21,7 +21,7 @@ SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 IMAGE = "ghcr.io/flavien-chenu/jinja4config:latest"
 
 TEMPLATE_DIRS = [
-    "terraform/envs/devs",
+    "terraform/envs/dev",
     "terraform/envs/staging",
     "terraform/envs/prod",
 ]

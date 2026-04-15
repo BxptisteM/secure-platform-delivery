@@ -35,14 +35,14 @@ allowed_ingress_cidr_blocks = [
 ]
 
 alb_internal                   = {{ shared.alb_internal | lower }}
-alb_enable_deletion_protection = {{ environments.prod.alb_enable_deletion_protection | lower }}
 alb_idle_timeout               = {{ shared.alb_idle_timeout }}
+alb_enable_deletion_protection = {{ shared.alb_enable_deletion_protection | lower }}
 
 enable_waf         = {{ shared.enable_waf | lower }}
 waf_default_action = "{{ shared.waf_default_action }}"
 
 waf_managed_rule_groups = [
-{% for rule in shared.waf_managed_rule_groups %}
+{% for rule in environments.prod.waf_managed_rule_groups %}
   {
     name            = "{{ rule.name }}"
     priority        = {{ rule.priority }}
