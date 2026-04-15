@@ -1,0 +1,96 @@
+name: Secure Terraform Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # 1. Secret Scanning
+  gitleaks:
+    name: 🛡️ Gitleaks (Secrets)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan Secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: detect --verbose --redact --fail-on-findings
+
+  # 2. Infrastructure as Code Scanning
+  checkov:
+    name: 🔍 Checkov (IaC)
+    needs: gitleaks # Arrow from Gitleaks to Checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Terraform files
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: false 
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+      - name: Upload Checkov Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-report
+          path: results.sarif
+
+  # 3. Vulnerability Scanning
+  trivy:
+    name: 🛡️ Trivy (Vulnerabilities)
+    needs: checkov # Arrow from Checkov to Trivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Filesystem
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH'
+          format: 'json'
+          output: 'trivy-results.json'
+      - name: Upload Trivy Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-results.json
+
+  # 4. Terraform Deployment
+  terraform:
+    name: 🚀 Terraform Apply/Plan
+    needs: trivy # Arrow from Trivy to Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Execute via launch.py
+        env:
+          # Assurez-vous d'avoir configuré vos secrets GitHub pour Terraform
+          # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_IN_AUTOMATION: true
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            python launch.py dev --plan-only
+          else
+            python launch.py dev
+          fi
