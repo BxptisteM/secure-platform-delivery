@@ -223,11 +223,13 @@ resource "aws_db_instance" "this" {
   # checkov:skip=CKV_AWS_118: Enhanced monitoring requires IAM role
   # checkov:skip=CKV_AWS_157: Multi-AZ expensive
   # checkov:skip=CKV_AWS_293: Disabled for easy destroy
+  # checkov:skip=CKV2_AWS_30: Query Logging requires custom parameter group
   deletion_protection                 = false
   auto_minor_version_upgrade          = true
   iam_database_authentication_enabled = true
 
   performance_insights_enabled    = true
+  performance_insights_kms_key_id = var.kms_key_arn
   copy_tags_to_snapshot           = true
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
 
