@@ -52,6 +52,10 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-public-${count.index}"
+  })
 }
 
 resource "aws_subnet" "private_app" {
@@ -60,6 +64,10 @@ resource "aws_subnet" "private_app" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_app_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-private-app-${count.index}"
+  })
 }
 
 resource "aws_subnet" "private_db" {
@@ -68,6 +76,10 @@ resource "aws_subnet" "private_db" {
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_db_subnet_cidrs[count.index]
   availability_zone = var.availability_zones[count.index]
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-private-db-${count.index}"
+  })
 }
 
 resource "aws_route_table" "public" {
@@ -103,6 +115,10 @@ resource "aws_security_group" "alb" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-alb-sg"
+  })
 }
 
 resource "aws_security_group" "app" {
@@ -121,6 +137,10 @@ resource "aws_security_group" "app" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-app-sg"
+  })
 }
 
 resource "aws_security_group" "db" {
@@ -139,6 +159,10 @@ resource "aws_security_group" "db" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-db-sg"
+  })
 }
 
 resource "aws_db_subnet_group" "this" {

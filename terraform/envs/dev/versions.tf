@@ -7,4 +7,12 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "secure-platform-tfstate"
+    key            = "dev/terraform.tfstate"
+    region         = "eu-west-3"
+    encrypt        = true
+    dynamodb_table = "secure-platform-tfstate-lock"
+  }
 }

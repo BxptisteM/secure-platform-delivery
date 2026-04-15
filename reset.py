@@ -4,6 +4,8 @@ import subprocess
 import json
 import sys
 import time
+import os
+import glob
 
 REGION = "eu-west-3"
 PROJECT = "secure-platform"
@@ -434,6 +436,21 @@ def terraform_destroy(env=None):
                 cmd(f"cd {path} && terraform destroy -var-file=terraform.tfvars -auto-approve")
 
 
+def delete_tfstate(env=None):
+    envs = [env] if env else ["dev", "staging", "prod"]
+    for e in envs:
+        pattern = f"terraform/envs/{e}/terraform.tfstate*"
+        files = glob.glob(pattern)
+        for f in files:
+            try:
+                os.remove(f)
+                ok(f"Deleted {f}")
+            except Exception as ex:
+                warn(f"Could not delete {f}: {ex}")
+    if not any(glob.glob(f"terraform/envs/{e}/terraform.tfstate*") for e in (envs)):
+        ok("tfstate files cleaned")
+
+
 def main():
     env = sys.argv[1] if len(sys.argv) == 2 else None
 
@@ -450,6 +467,7 @@ def main():
     delete_s3(env)
     delete_kms_aliases(env)
     delete_vpcs(env)
+    delete_tfstate(env)
 
     print(f"\n{GREEN}--- DONE ---{RESET}\n")
 
