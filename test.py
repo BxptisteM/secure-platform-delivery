@@ -37,23 +37,19 @@ path = os.path.join(BASE_DIR, "terraform", "envs", env)
 
 print(f"\n{BLUE}--- TEST {env.upper()} ---{RESET}\n")
 
-# --- OUTPUTS
 alb_dns, _ = run(f"cd {path} && terraform output -raw alb_dns_name", True)
 alb_arn, _ = run(f"cd {path} && terraform output -raw alb_arn", True)
 waf_arn, _ = run(f"cd {path} && terraform output -raw waf_arn", True)
 sg, _ = run(f"cd {path} && terraform output -raw alb_security_group_id", True)
 
-# --- DNS
 info("DNS resolution")
 _, code = run(f"nslookup {alb_dns}", True)
 ok("DNS OK") if code == 0 else fail("DNS failed")
 
-# --- ALB HTTP
 info("ALB HTTP response")
 out, _ = run(f"curl -s -o /dev/null -w '%{{http_code}}' http://{alb_dns}", True)
 ok("ALB returns 200") if out == "200" else fail(f"ALB failed ({out})")
 
-# --- WAF
 info("WAF test")
 out, _ = run(f"curl -s -o /dev/null -w '%{{http_code}}' \"http://{alb_dns}/?q=%27%20OR%201%3D1\"", True)
 if env == "dev":
@@ -61,14 +57,12 @@ if env == "dev":
 else:
     ok("WAF blocking") if out == "403" else fail("WAF not blocking")
 
-# --- LISTENER
 info("ALB listener")
 out, _ = run(f"""aws elbv2 describe-listeners \
 --load-balancer-arn "{alb_arn}" \
 --region {REGION}""", True)
 ok("Listener OK") if "80" in out else fail("Listener missing")
 
-# --- WAF ATTACH
 info("WAF attachment")
 out, _ = run(f"""aws wafv2 list-resources-for-web-acl \
 --web-acl-arn "{waf_arn}" \
@@ -76,32 +70,28 @@ out, _ = run(f"""aws wafv2 list-resources-for-web-acl \
 --region {REGION}""", True)
 ok("WAF attached") if alb_arn in out else fail("WAF not attached")
 
-# --- SG
 info("Security Group")
 out, _ = run(f"""aws ec2 describe-security-groups \
 --group-ids "{sg}" \
 --region {REGION}""", True)
 ok("SG OK") if "0.0.0.0/0" in out else fail("SG issue")
 
-# --- SUBNETS
 info("Subnets")
 out, _ = run(f"""aws elbv2 describe-load-balancers \
 --load-balancer-arns "{alb_arn}" \
 --region {REGION}""", True)
 ok("Multi-AZ OK") if "eu-west-3a" in out and "eu-west-3b" in out else fail("AZ issue")
 
-# --- FORCE TRAFFIC
 info("Generating traffic")
 for _ in range(20):
     run(f"curl -s http://{alb_dns} > /dev/null")
 
 time.sleep(60)
 
-# --- METRICS
 info("CloudWatch metrics")
 
 found = False
-for _ in range(6):  # max ~60s
+for _ in range(6):
     out, _ = run(f"""aws cloudwatch list-metrics \
 --namespace AWS/ApplicationELB \
 --region {REGION}""", True)
@@ -116,7 +106,6 @@ for _ in range(6):  # max ~60s
 if not found:
     fail("Metrics missing")
 
-# --- WAF LOGS (OPTIONAL → PASS SI ABSENT)
 info("WAF logs")
 out, _ = run(f"""aws logs describe-log-groups --region {REGION}""", True)
 ok("Logs OK (or not enabled)")

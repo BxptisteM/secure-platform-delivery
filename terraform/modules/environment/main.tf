@@ -31,8 +31,6 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# ---------------- VPC ----------------
-
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -46,8 +44,6 @@ resource "aws_vpc" "this" {
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 }
-
-# ---------------- SUBNETS ----------------
 
 resource "aws_subnet" "public" {
   count = length(var.public_subnet_cidrs)
@@ -74,8 +70,6 @@ resource "aws_subnet" "private_db" {
   availability_zone = var.availability_zones[count.index]
 }
 
-# ---------------- ROUTING ----------------
-
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 }
@@ -92,8 +86,6 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
-
-# ---------------- SECURITY GROUPS ----------------
 
 resource "aws_security_group" "alb" {
   vpc_id = aws_vpc.this.id
@@ -149,14 +141,10 @@ resource "aws_security_group" "db" {
   }
 }
 
-# ---------------- DB SUBNET ----------------
-
 resource "aws_db_subnet_group" "this" {
   name       = "${var.project_name}-${var.environment}-db-subnet-group"
   subnet_ids = aws_subnet.private_db[*].id
 }
-
-# ---------------- EC2 ----------------
 
 resource "aws_instance" "test" {
   ami                    = data.aws_ami.amazon_linux_2023.id
@@ -174,8 +162,6 @@ resource "aws_instance" "test" {
               echo "OK" > /var/www/html/index.html
               EOF
 }
-
-# ---------------- ALB ----------------
 
 resource "aws_lb" "this" {
   name               = "${var.project_name}-${var.environment}-alb"
@@ -210,8 +196,6 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.this.arn
   }
 }
-
-# ---------------- WAF ----------------
 
 resource "aws_wafv2_web_acl" "this" {
   count = var.enable_waf ? 1 : 0
