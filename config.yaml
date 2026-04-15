@@ -6,6 +6,19 @@ shared:
     - "eu-west-3b"
   allowed_ingress_cidr_blocks:
     - "0.0.0.0/0"
+  alb_internal: false
+  alb_idle_timeout: 60
+  enable_waf: true
+  waf_default_action: "allow"
+  waf_managed_rule_groups:
+    - name: "AWSManagedRulesCommonRuleSet"
+      priority: 10
+      vendor_name: "AWS"
+      override_action: "count"
+    - name: "AWSManagedRulesKnownBadInputsRuleSet"
+      priority: 20
+      vendor_name: "AWS"
+      override_action: "count"
 
 environments:
   dev:
@@ -20,6 +33,7 @@ environments:
     private_db_subnet_cidrs:
       - "{{ 'DEV_PRIVATE_DB_SUBNET_CIDR_1' | env }}"
       - "{{ 'DEV_PRIVATE_DB_SUBNET_CIDR_2' | env }}"
+    alb_enable_deletion_protection: false
 
   staging:
     environment: "staging"
@@ -33,6 +47,7 @@ environments:
     private_db_subnet_cidrs:
       - "{{ 'STAGING_PRIVATE_DB_SUBNET_CIDR_1' | env }}"
       - "{{ 'STAGING_PRIVATE_DB_SUBNET_CIDR_2' | env }}"
+    alb_enable_deletion_protection: false
 
   prod:
     environment: "prod"
@@ -46,3 +61,4 @@ environments:
     private_db_subnet_cidrs:
       - "{{ 'PROD_PRIVATE_DB_SUBNET_CIDR_1' | env }}"
       - "{{ 'PROD_PRIVATE_DB_SUBNET_CIDR_2' | env }}"
+    alb_enable_deletion_protection: true

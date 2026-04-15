@@ -37,3 +37,38 @@ output "db_subnet_group_name" {
   description = "DB subnet group name"
   value       = aws_db_subnet_group.this.name
 }
+
+output "alb_id" {
+  description = "ALB ID"
+  value       = aws_lb.this.id
+}
+
+output "alb_arn" {
+  description = "ALB ARN"
+  value       = aws_lb.this.arn
+}
+
+output "alb_dns_name" {
+  description = "ALB DNS name"
+  value       = aws_lb.this.dns_name
+}
+
+output "alb_zone_id" {
+  description = "ALB hosted zone ID"
+  value       = aws_lb.this.zone_id
+}
+
+output "waf_id" {
+  description = "WAF ID"
+  value       = try(aws_wafv2_web_acl.this[0].id, null)
+}
+
+output "waf_arn" {
+  description = "WAF ARN"
+  value       = try(aws_wafv2_web_acl.this[0].arn, null)
+}
+
+output "waf_name" {
+  description = "WAF name"
+  value       = try(aws_wafv2_web_acl.this[0].name, null)
+}

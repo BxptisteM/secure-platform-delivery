@@ -219,3 +219,90 @@ resource "aws_db_subnet_group" "this" {
     Name = "${var.project_name}-${var.environment}-db-subnet-group"
   })
 }
+
+resource "aws_lb" "this" {
+  name                       = "${var.project_name}-${var.environment}-alb"
+  internal                   = var.alb_internal
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = aws_subnet.public[*].id
+  enable_deletion_protection = var.alb_enable_deletion_protection
+  idle_timeout               = var.alb_idle_timeout
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-alb"
+  })
+}
+
+resource "aws_wafv2_web_acl" "this" {
+  count = var.enable_waf ? 1 : 0
+
+  name        = "${var.project_name}-${var.environment}-waf"
+  description = "WAF for ${var.project_name}-${var.environment} ALB"
+  scope       = "REGIONAL"
+
+  dynamic "default_action" {
+    for_each = var.waf_default_action == "allow" ? [1] : []
+    content {
+      allow {}
+    }
+  }
+
+  dynamic "default_action" {
+    for_each = var.waf_default_action == "block" ? [1] : []
+    content {
+      block {}
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.project_name}-${var.environment}-waf"
+    sampled_requests_enabled   = true
+  }
+
+  dynamic "rule" {
+    for_each = var.waf_managed_rule_groups
+
+    content {
+      name     = rule.value.name
+      priority = rule.value.priority
+
+      override_action {
+        dynamic "none" {
+          for_each = try(rule.value.override_action, "none") == "none" ? [1] : []
+          content {}
+        }
+
+        dynamic "count" {
+          for_each = try(rule.value.override_action, "none") == "count" ? [1] : []
+          content {}
+        }
+      }
+
+      statement {
+        managed_rule_group_statement {
+          name        = rule.value.name
+          vendor_name = try(rule.value.vendor_name, "AWS")
+        }
+      }
+
+      visibility_config {
+        cloudwatch_metrics_enabled = true
+        metric_name                = "${var.project_name}-${var.environment}-${rule.value.name}"
+        sampled_requests_enabled   = true
+      }
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-waf"
+  })
+}
+
+resource "aws_wafv2_web_acl_association" "this" {
+  count = var.enable_waf ? 1 : 0
+
+  resource_arn = aws_lb.this.arn
+  web_acl_arn  = aws_wafv2_web_acl.this[0].arn
+}

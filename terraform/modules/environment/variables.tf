@@ -38,3 +38,62 @@ variable "allowed_ingress_cidr_blocks" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
+
+variable "alb_internal" {
+  description = "Whether the ALB is internal"
+  type        = bool
+  default     = false
+}
+
+variable "alb_enable_deletion_protection" {
+  description = "Enable deletion protection on the ALB"
+  type        = bool
+  default     = false
+}
+
+variable "alb_idle_timeout" {
+  description = "Idle timeout for the ALB in seconds"
+  type        = number
+  default     = 60
+}
+
+variable "enable_waf" {
+  description = "Enable WAF for the ALB"
+  type        = bool
+  default     = true
+}
+
+variable "waf_default_action" {
+  description = "Default action for WAF: allow or block"
+  type        = string
+  default     = "allow"
+
+  validation {
+    condition     = contains(["allow", "block"], var.waf_default_action)
+    error_message = "waf_default_action must be either 'allow' or 'block'."
+  }
+}
+
+variable "waf_managed_rule_groups" {
+  description = "Managed rule groups attached to the WAF"
+  type = list(object({
+    name            = string
+    priority        = number
+    vendor_name     = optional(string, "AWS")
+    override_action = optional(string, "none")
+  }))
+  default = [
+    {
+      name            = "AWSManagedRulesCommonRuleSet"
+      priority        = 10
+      vendor_name     = "AWS"
+      override_action = "none"
+    },
+    {
+      name            = "AWSManagedRulesKnownBadInputsRuleSet"
+      priority        = 20
+      vendor_name     = "AWS"
+      override_action = "none"
+    }
+  ]
+}
