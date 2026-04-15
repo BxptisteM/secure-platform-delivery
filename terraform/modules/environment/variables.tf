@@ -97,3 +97,19 @@ variable "waf_managed_rule_groups" {
     }
   ]
 }
+
+variable "kms_key_arn" {
+  description = "KMS key ARN used for encryption"
+  type        = string
+}
+
+variable "db_username" {
+  description = "RDS master username"
+  type        = string
+}
+
+variable "db_password" {
+  description = "RDS master password"
+  type        = string
+  sensitive   = true
+}

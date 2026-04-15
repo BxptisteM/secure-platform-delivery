@@ -72,3 +72,20 @@ output "waf_name" {
   description = "WAF name"
   value       = try(aws_wafv2_web_acl.this[0].name, null)
 }
+
+output "db_instance_id" {
+  description = "RDS instance identifier"
+  value       = aws_db_instance.this.identifier
+}
+
+output "db_instance_endpoint" {
+  description = "RDS endpoint"
+  value       = aws_db_instance.this.endpoint
+}
+
+output "secure_bucket_name" {
+  description = "Encrypted S3 bucket name"
+  value       = aws_s3_bucket.secure.bucket
+}
+
+
